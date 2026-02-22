@@ -15,7 +15,12 @@ export function SearchResults({ results }: SearchResultsProps) {
   const { t } = useTranslation();
 
   if (results.length === 0) {
-    return <p className={styles.noResults}>{t("search.noResults")}</p>;
+    return (
+      <div>
+        <p className={styles.noResults}>{t("search.noResults")}</p>
+        <p className={styles.emptyHint}>{t("search.emptyHint")}</p>
+      </div>
+    );
   }
 
   return (

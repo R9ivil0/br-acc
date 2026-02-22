@@ -3,10 +3,15 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
+from icarus.config import settings
 from icarus.dependencies import close_driver, init_driver
 from icarus.middleware.cpf_masking import CPFMaskingMiddleware
-from icarus.routers import baseline, entity, graph, investigation, meta, patterns, search
+from icarus.middleware.rate_limit import limiter
+from icarus.routers import auth, baseline, entity, graph, investigation, meta, patterns, search
 
 
 @asynccontextmanager
@@ -23,15 +28,20 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
+app.add_middleware(SlowAPIMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=settings.cors_origins.split(","),
     allow_methods=["*"],
     allow_headers=["*"],
 )
 app.add_middleware(CPFMaskingMiddleware)
 
 app.include_router(meta.router)
+app.include_router(auth.router)
 app.include_router(entity.router)
 app.include_router(search.router)
 app.include_router(graph.router)

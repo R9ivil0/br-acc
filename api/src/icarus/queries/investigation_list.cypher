@@ -1,6 +1,6 @@
-MATCH (i:Investigation)
+MATCH (u:User {id: $user_id})-[:OWNS]->(i:Investigation)
 WITH count(i) AS total
-MATCH (i:Investigation)
+MATCH (u:User {id: $user_id})-[:OWNS]->(i:Investigation)
 ORDER BY i.created_at DESC
 SKIP $skip
 LIMIT $limit

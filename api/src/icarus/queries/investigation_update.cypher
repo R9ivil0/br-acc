@@ -1,4 +1,4 @@
-MATCH (i:Investigation {id: $id})
+MATCH (u:User {id: $user_id})-[:OWNS]->(i:Investigation {id: $id})
 SET i.title = COALESCE($title, i.title),
     i.description = COALESCE($description, i.description),
     i.updated_at = datetime()

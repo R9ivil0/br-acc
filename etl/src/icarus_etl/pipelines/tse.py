@@ -24,8 +24,14 @@ class TSEPipeline(Pipeline):
     name = "tse"
     source_id = "tribunal_superior_eleitoral"
 
-    def __init__(self, driver: Driver, data_dir: str = "./data") -> None:
-        super().__init__(driver, data_dir)
+    def __init__(
+        self,
+        driver: Driver,
+        data_dir: str = "./data",
+        limit: int | None = None,
+        chunk_size: int = 50_000,
+    ) -> None:
+        super().__init__(driver, data_dir, limit=limit, chunk_size=chunk_size)
         self.candidates: list[dict[str, Any]] = []
         self.donations: list[dict[str, Any]] = []
         self.elections: list[dict[str, Any]] = []

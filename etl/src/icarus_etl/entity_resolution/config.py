@@ -12,7 +12,7 @@ def get_person_settings() -> dict[str, Any]:
     - birth_date: exact match
     """
     try:
-        import splink.comparison_library as cl
+        import splink.comparison_library as cl  # type: ignore[import-not-found]
         from splink import SettingsCreator
     except ImportError as exc:
         raise ImportError(
@@ -28,11 +28,11 @@ def get_person_settings() -> dict[str, Any]:
             cl.ExactMatch("birth_date"),
         ],
         blocking_rules_to_generate_predictions=[
-            "l.cpf = r.cpf",  # type: ignore[list-item]
-            "l.name = r.name",  # type: ignore[list-item]
+            "l.cpf = r.cpf",
+            "l.name = r.name",
         ],
         retain_matching_columns=True,
         retain_intermediate_calculation_columns=False,
     )
-    result: dict[str, Any] = creator.get_settings("duckdb").as_dict()  # type: ignore[no-untyped-call]
+    result: dict[str, Any] = creator.get_settings("duckdb").as_dict()
     return result

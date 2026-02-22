@@ -46,3 +46,7 @@ CREATE INDEX election_year IF NOT EXISTS
 CREATE FULLTEXT INDEX entity_search IF NOT EXISTS
   FOR (n:Person|Company)
   ON EACH [n.name, n.razao_social, n.cpf, n.cnpj];
+
+// ── User Constraints ────────────────────────────────────
+CREATE CONSTRAINT user_email_unique IF NOT EXISTS
+  FOR (u:User) REQUIRE u.email IS UNIQUE;

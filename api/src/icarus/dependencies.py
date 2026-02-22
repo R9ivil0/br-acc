@@ -1,12 +1,17 @@
 from collections.abc import AsyncGenerator
 from typing import Annotated
 
-from fastapi import Depends, Request
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import OAuth2PasswordBearer
 from neo4j import AsyncDriver, AsyncGraphDatabase, AsyncSession
 
 from icarus.config import settings
+from icarus.models.user import UserResponse
+from icarus.services import auth_service
 
 _driver: AsyncDriver | None = None
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
 
 async def init_driver() -> AsyncDriver:
@@ -36,3 +41,33 @@ async def get_session(
 ) -> AsyncGenerator[AsyncSession]:
     async with driver.session() as session:
         yield session
+
+
+async def get_current_user(
+    token: Annotated[str | None, Depends(oauth2_scheme)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> UserResponse:
+    if token is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    user_id = auth_service.decode_access_token(token)
+    if user_id is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    user = await auth_service.get_user_by_id(session, user_id)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    return user
+
+
+async def get_optional_user(
+    token: Annotated[str | None, Depends(oauth2_scheme)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> UserResponse | None:
+    if token is None:
+        return None
+    user_id = auth_service.decode_access_token(token)
+    if user_id is None:
+        return None
+    return await auth_service.get_user_by_id(session, user_id)
+
+
+CurrentUser = Annotated[UserResponse, Depends(get_current_user)]

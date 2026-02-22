@@ -10,6 +10,14 @@ class Settings(BaseSettings):
     api_port: int = 8000
     log_level: str = "info"
 
+    jwt_secret_key: str = "change-me-in-production"
+    jwt_algorithm: str = "HS256"
+    jwt_expire_minutes: int = 1440
+    rate_limit_anon: str = "60/minute"
+    rate_limit_auth: str = "300/minute"
+    invite_code: str = ""
+    cors_origins: str = "http://localhost:3000"
+
     model_config = {"env_prefix": "", "env_file": ".env"}
 
 

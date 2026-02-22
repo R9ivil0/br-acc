@@ -47,11 +47,17 @@ async def create_investigation(
     session: AsyncSession,
     title: str,
     description: str | None,
+    user_id: str,
 ) -> InvestigationResponse:
     record = await execute_query_single(
         session,
         "investigation_create",
-        {"id": str(uuid.uuid4()), "title": title, "description": description or ""},
+        {
+            "id": str(uuid.uuid4()),
+            "title": title,
+            "description": description or "",
+            "user_id": user_id,
+        },
     )
     if record is None:
         msg = "Failed to create investigation"
@@ -77,12 +83,13 @@ async def list_investigations(
     session: AsyncSession,
     page: int,
     size: int,
+    user_id: str,
 ) -> tuple[list[InvestigationResponse], int]:
     skip = (page - 1) * size
     records = await execute_query(
         session,
         "investigation_list",
-        {"skip": skip, "limit": size},
+        {"skip": skip, "limit": size, "user_id": user_id},
     )
     if not records:
         return [], 0
@@ -96,11 +103,12 @@ async def update_investigation(
     investigation_id: str,
     title: str | None,
     description: str | None,
+    user_id: str,
 ) -> InvestigationResponse | None:
     record = await execute_query_single(
         session,
         "investigation_update",
-        {"id": investigation_id, "title": title, "description": description},
+        {"id": investigation_id, "title": title, "description": description, "user_id": user_id},
     )
     if record is None:
         return None
@@ -110,11 +118,12 @@ async def update_investigation(
 async def delete_investigation(
     session: AsyncSession,
     investigation_id: str,
+    user_id: str,
 ) -> bool:
     record = await execute_query_single(
         session,
         "investigation_delete",
-        {"id": investigation_id},
+        {"id": investigation_id, "user_id": user_id},
     )
     if record is None:
         return False
@@ -125,11 +134,12 @@ async def add_entity_to_investigation(
     session: AsyncSession,
     investigation_id: str,
     entity_id: str,
+    user_id: str,
 ) -> bool:
     record = await execute_query_single(
         session,
         "investigation_add_entity",
-        {"investigation_id": investigation_id, "entity_id": entity_id},
+        {"investigation_id": investigation_id, "entity_id": entity_id, "user_id": user_id},
     )
     return record is not None
 
@@ -139,6 +149,7 @@ async def create_annotation(
     investigation_id: str,
     entity_id: str,
     text: str,
+    user_id: str,
 ) -> Annotation:
     record = await execute_query_single(
         session,
@@ -148,6 +159,7 @@ async def create_annotation(
             "investigation_id": investigation_id,
             "entity_id": entity_id,
             "text": text,
+            "user_id": user_id,
         },
     )
     if record is None:
@@ -173,6 +185,7 @@ async def create_tag(
     investigation_id: str,
     name: str,
     color: str,
+    user_id: str,
 ) -> Tag:
     record = await execute_query_single(
         session,
@@ -182,6 +195,7 @@ async def create_tag(
             "investigation_id": investigation_id,
             "name": name,
             "color": color,
+            "user_id": user_id,
         },
     )
     if record is None:
@@ -205,12 +219,13 @@ async def list_tags(
 async def generate_share_token(
     session: AsyncSession,
     investigation_id: str,
+    user_id: str,
 ) -> str | None:
     token = str(uuid.uuid4())
     record = await execute_query_single(
         session,
         "investigation_share",
-        {"id": investigation_id, "share_token": token},
+        {"id": investigation_id, "share_token": token, "user_id": user_id},
     )
     if record is None:
         return None

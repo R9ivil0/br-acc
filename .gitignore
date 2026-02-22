@@ -55,3 +55,9 @@ htmlcov/
 *.zip
 *.gz
 !etl/tests/fixtures/**/*.csv
+
+# CNPJ data directories (keep .gitkeep only)
+data/cnpj/raw/*
+data/cnpj/extracted/*
+data/cnpj/reference/*
+!data/cnpj/**/.gitkeep

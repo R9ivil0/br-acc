@@ -47,8 +47,14 @@ class TransparenciaPipeline(Pipeline):
     name = "transparencia"
     source_id = "portal_transparencia"
 
-    def __init__(self, driver: Driver, data_dir: str = "./data") -> None:
-        super().__init__(driver, data_dir)
+    def __init__(
+        self,
+        driver: Driver,
+        data_dir: str = "./data",
+        limit: int | None = None,
+        chunk_size: int = 50_000,
+    ) -> None:
+        super().__init__(driver, data_dir, limit=limit, chunk_size=chunk_size)
         self._raw_contratos: pd.DataFrame = pd.DataFrame()
         self._raw_servidores: pd.DataFrame = pd.DataFrame()
         self._raw_emendas: pd.DataFrame = pd.DataFrame()

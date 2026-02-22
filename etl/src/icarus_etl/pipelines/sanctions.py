@@ -25,8 +25,14 @@ class SanctionsPipeline(Pipeline):
     name = "sanctions"
     source_id = "ceis_cnep"
 
-    def __init__(self, driver: Driver, data_dir: str = "./data") -> None:
-        super().__init__(driver, data_dir)
+    def __init__(
+        self,
+        driver: Driver,
+        data_dir: str = "./data",
+        limit: int | None = None,
+        chunk_size: int = 50_000,
+    ) -> None:
+        super().__init__(driver, data_dir, limit=limit, chunk_size=chunk_size)
         self._raw_ceis: pd.DataFrame = pd.DataFrame()
         self._raw_cnep: pd.DataFrame = pd.DataFrame()
         self.sanctions: list[dict[str, Any]] = []

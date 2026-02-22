@@ -5,6 +5,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from icarus.main import app
+from icarus.services.auth_service import create_access_token
 
 
 @pytest.fixture
@@ -21,3 +22,9 @@ async def client() -> AsyncIterator[AsyncClient]:
     transport = ASGITransport(app=app)  # type: ignore[arg-type]
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
+
+
+@pytest.fixture
+def auth_headers() -> dict[str, str]:
+    token = create_access_token("test-user-id")
+    return {"Authorization": f"Bearer {token}"}

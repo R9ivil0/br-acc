@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router";
 
+import { Spinner } from "@/components/common/Spinner";
 import { EntityDetail } from "@/components/entity/EntityDetail";
 import { GraphCanvas } from "@/components/graph/GraphCanvas";
 import { GraphControls } from "@/components/graph/GraphControls";
@@ -62,7 +63,7 @@ export function GraphExplorer() {
       </div>
 
       <div className={styles.graphArea}>
-        {loading && <p className={styles.status}>{t("common.loading")}</p>}
+        {loading && <Spinner />}
         {error && <p className={styles.status}>{error}</p>}
         {data && entityId && (
           <GraphCanvas

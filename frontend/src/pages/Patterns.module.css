@@ -53,3 +53,15 @@
   flex-direction: column;
   gap: var(--space-md);
 }
+
+@media (max-width: 768px) {
+  .page {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+}

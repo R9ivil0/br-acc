@@ -39,7 +39,6 @@ def _mock_record(data: dict[str, object]) -> MagicMock:
     record.__contains__ = lambda self, key: key in data
     record.keys.return_value = list(data.keys())
     record.__iter__ = lambda self: iter(data.keys())
-    # Make isinstance check pass for neo4j.Record
     return record
 
 
@@ -56,8 +55,51 @@ def _fake_result(records: list[MagicMock]) -> AsyncMock:
     return result
 
 
+def _setup_mock_session(
+    driver: MagicMock,
+    records: list[MagicMock],
+) -> AsyncMock:
+    mock_session = AsyncMock()
+    mock_session.run = AsyncMock(return_value=_fake_result(records))
+    driver.session.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+    return mock_session
+
+
+def _user_record() -> MagicMock:
+    """Mock user record for auth dependency resolution."""
+    return _mock_record({
+        "id": "test-user-id",
+        "email": "test@example.com",
+        "created_at": "2026-01-01T00:00:00Z",
+    })
+
+
+def _setup_session_with_user_and_data(
+    driver: MagicMock,
+    data_record: MagicMock,
+) -> AsyncMock:
+    """Setup mock session that returns user record on first call, data on second."""
+    user_rec = _user_record()
+    mock_session = AsyncMock()
+    call_count = 0
+
+    async def _run_side_effect(*args: object, **kwargs: object) -> AsyncMock:
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            # user_get_by_id for auth
+            return _fake_result([user_rec])
+        return _fake_result([data_record])
+
+    mock_session.run = AsyncMock(side_effect=_run_side_effect)
+    driver.session.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+    return mock_session
+
+
 @pytest.mark.anyio
-async def test_create_investigation(client: AsyncClient) -> None:
+async def test_create_investigation(
+    client: AsyncClient, auth_headers: dict[str, str]
+) -> None:
     record_data = {
         "id": "test-uuid",
         "title": "Test Investigation",
@@ -71,14 +113,12 @@ async def test_create_investigation(client: AsyncClient) -> None:
 
     from icarus.main import app
 
-    driver = app.state.neo4j_driver
-    mock_session = AsyncMock()
-    mock_session.run = AsyncMock(return_value=_fake_result([mock_record]))
-    driver.session.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+    _setup_session_with_user_and_data(app.state.neo4j_driver, mock_record)
 
     response = await client.post(
         "/api/v1/investigations/",
         json={"title": "Test Investigation"},
+        headers=auth_headers,
     )
     assert response.status_code == 201
     data = response.json()
@@ -87,7 +127,18 @@ async def test_create_investigation(client: AsyncClient) -> None:
 
 
 @pytest.mark.anyio
-async def test_list_investigations(client: AsyncClient) -> None:
+async def test_create_investigation_no_auth(client: AsyncClient) -> None:
+    response = await client.post(
+        "/api/v1/investigations/",
+        json={"title": "Test Investigation"},
+    )
+    assert response.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_list_investigations(
+    client: AsyncClient, auth_headers: dict[str, str]
+) -> None:
     record_data = {
         "total": 1,
         "id": "test-uuid",
@@ -99,23 +150,34 @@ async def test_list_investigations(client: AsyncClient) -> None:
         "entity_ids": [],
     }
     mock_record = _mock_record(record_data)
+    user_rec = _user_record()
 
     from icarus.main import app
 
     driver = app.state.neo4j_driver
     mock_session = AsyncMock()
 
-    result = AsyncMock()
+    call_count = 0
 
-    async def _iter(self: object) -> object:  # noqa: ANN001
-        yield mock_record
+    async def _run_side_effect(*args: object, **kwargs: object) -> AsyncMock:
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return _fake_result([user_rec])
+        # list query returns records via __aiter__
+        result = AsyncMock()
 
-    result.__aiter__ = _iter
-    result.single = AsyncMock(return_value=mock_record)
-    mock_session.run = AsyncMock(return_value=result)
+        async def _iter(self: object) -> object:  # noqa: ANN001
+            yield mock_record
+
+        result.__aiter__ = _iter
+        result.single = AsyncMock(return_value=mock_record)
+        return result
+
+    mock_session.run = AsyncMock(side_effect=_run_side_effect)
     driver.session.return_value.__aenter__ = AsyncMock(return_value=mock_session)
 
-    response = await client.get("/api/v1/investigations/")
+    response = await client.get("/api/v1/investigations/", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert "investigations" in data
@@ -145,22 +207,31 @@ async def test_get_nonexistent_investigation(client: AsyncClient) -> None:
 
 
 @pytest.mark.anyio
-async def test_delete_investigation(client: AsyncClient) -> None:
+async def test_delete_investigation(
+    client: AsyncClient, auth_headers: dict[str, str]
+) -> None:
     delete_record = _mock_record({"deleted": 1})
 
     from icarus.main import app
 
-    driver = app.state.neo4j_driver
-    mock_session = AsyncMock()
-    mock_session.run = AsyncMock(return_value=_fake_result([delete_record]))
-    driver.session.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+    _setup_session_with_user_and_data(app.state.neo4j_driver, delete_record)
 
-    response = await client.delete("/api/v1/investigations/test-uuid")
+    response = await client.delete(
+        "/api/v1/investigations/test-uuid", headers=auth_headers
+    )
     assert response.status_code == 204
 
 
 @pytest.mark.anyio
-async def test_create_annotation(client: AsyncClient) -> None:
+async def test_delete_investigation_no_auth(client: AsyncClient) -> None:
+    response = await client.delete("/api/v1/investigations/test-uuid")
+    assert response.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_create_annotation(
+    client: AsyncClient, auth_headers: dict[str, str]
+) -> None:
     record_data = {
         "id": "ann-uuid",
         "entity_id": "entity-1",
@@ -172,14 +243,12 @@ async def test_create_annotation(client: AsyncClient) -> None:
 
     from icarus.main import app
 
-    driver = app.state.neo4j_driver
-    mock_session = AsyncMock()
-    mock_session.run = AsyncMock(return_value=_fake_result([mock_record]))
-    driver.session.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+    _setup_session_with_user_and_data(app.state.neo4j_driver, mock_record)
 
     response = await client.post(
         "/api/v1/investigations/inv-uuid/annotations",
         json={"entity_id": "entity-1", "text": "Note about entity"},
+        headers=auth_headers,
     )
     assert response.status_code == 201
     data = response.json()
@@ -187,7 +256,9 @@ async def test_create_annotation(client: AsyncClient) -> None:
 
 
 @pytest.mark.anyio
-async def test_create_tag(client: AsyncClient) -> None:
+async def test_create_tag(
+    client: AsyncClient, auth_headers: dict[str, str]
+) -> None:
     record_data = {
         "id": "tag-uuid",
         "investigation_id": "inv-uuid",
@@ -198,14 +269,12 @@ async def test_create_tag(client: AsyncClient) -> None:
 
     from icarus.main import app
 
-    driver = app.state.neo4j_driver
-    mock_session = AsyncMock()
-    mock_session.run = AsyncMock(return_value=_fake_result([mock_record]))
-    driver.session.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+    _setup_session_with_user_and_data(app.state.neo4j_driver, mock_record)
 
     response = await client.post(
         "/api/v1/investigations/inv-uuid/tags",
         json={"name": "important"},
+        headers=auth_headers,
     )
     assert response.status_code == 201
     data = response.json()
@@ -214,7 +283,9 @@ async def test_create_tag(client: AsyncClient) -> None:
 
 
 @pytest.mark.anyio
-async def test_share_investigation(client: AsyncClient) -> None:
+async def test_share_investigation(
+    client: AsyncClient, auth_headers: dict[str, str]
+) -> None:
     record_data = {
         "id": "inv-uuid",
         "share_token": "share-token-uuid",
@@ -223,12 +294,11 @@ async def test_share_investigation(client: AsyncClient) -> None:
 
     from icarus.main import app
 
-    driver = app.state.neo4j_driver
-    mock_session = AsyncMock()
-    mock_session.run = AsyncMock(return_value=_fake_result([mock_record]))
-    driver.session.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+    _setup_session_with_user_and_data(app.state.neo4j_driver, mock_record)
 
-    response = await client.post("/api/v1/investigations/inv-uuid/share")
+    response = await client.post(
+        "/api/v1/investigations/inv-uuid/share", headers=auth_headers
+    )
     assert response.status_code == 200
     data = response.json()
     assert "share_token" in data

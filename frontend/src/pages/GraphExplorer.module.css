@@ -21,3 +21,15 @@
   color: var(--text-muted);
   font-size: var(--font-size-sm);
 }
+
+@media (max-width: 768px) {
+  .explorer {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+}

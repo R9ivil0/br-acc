@@ -1,7 +1,19 @@
+@keyframes slideIn {
+  from {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
 .detail {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  animation: slideIn var(--transition-normal) ease-out;
 }
 
 .titleRow {

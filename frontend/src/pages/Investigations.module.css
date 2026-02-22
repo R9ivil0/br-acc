@@ -17,4 +17,8 @@
     flex-direction: column;
     height: auto;
   }
+
+  .content {
+    width: 100%;
+  }
 }

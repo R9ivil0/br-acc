@@ -2,8 +2,11 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { searchEntities, type SearchResult } from "@/api/client";
+import { Spinner } from "@/components/common/Spinner";
 import { SearchBar, type SearchParams } from "@/components/search/SearchBar";
 import { SearchResults } from "@/components/search/SearchResults";
+
+import styles from "./Search.module.css";
 
 export function Search() {
   const { t } = useTranslation();
@@ -28,12 +31,15 @@ export function Search() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-lg)" }}>
+    <div className={styles.page}>
       <SearchBar onSearch={handleSearch} isLoading={isLoading} />
-      {error && (
-        <p style={{ color: "var(--color-sanction)", textAlign: "center" }}>{error}</p>
+      {error && <p className={styles.error}>{error}</p>}
+      {isLoading && (
+        <div className={styles.loading}>
+          <Spinner />
+        </div>
       )}
-      {hasSearched && !error && <SearchResults results={results} />}
+      {hasSearched && !isLoading && !error && <SearchResults results={results} />}
     </div>
   );
 }

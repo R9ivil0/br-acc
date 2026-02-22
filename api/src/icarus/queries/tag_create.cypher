@@ -1,4 +1,4 @@
-MATCH (i:Investigation {id: $investigation_id})
+MATCH (u:User {id: $user_id})-[:OWNS]->(i:Investigation {id: $investigation_id})
 CREATE (t:Tag {
   id: $id,
   name: $name,

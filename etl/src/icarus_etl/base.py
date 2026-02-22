@@ -1,6 +1,9 @@
+import logging
 from abc import ABC, abstractmethod
 
 from neo4j import Driver
+
+logger = logging.getLogger(__name__)
 
 
 class Pipeline(ABC):
@@ -9,9 +12,17 @@ class Pipeline(ABC):
     name: str
     source_id: str
 
-    def __init__(self, driver: Driver, data_dir: str = "./data") -> None:
+    def __init__(
+        self,
+        driver: Driver,
+        data_dir: str = "./data",
+        limit: int | None = None,
+        chunk_size: int = 50_000,
+    ) -> None:
         self.driver = driver
         self.data_dir = data_dir
+        self.limit = limit
+        self.chunk_size = chunk_size
 
     @abstractmethod
     def extract(self) -> None:
@@ -27,10 +38,10 @@ class Pipeline(ABC):
 
     def run(self) -> None:
         """Execute the full ETL pipeline."""
-        print(f"[{self.name}] Starting extraction...")
+        logger.info("[%s] Starting extraction...", self.name)
         self.extract()
-        print(f"[{self.name}] Starting transformation...")
+        logger.info("[%s] Starting transformation...", self.name)
         self.transform()
-        print(f"[{self.name}] Starting load...")
+        logger.info("[%s] Starting load...", self.name)
         self.load()
-        print(f"[{self.name}] Pipeline complete.")
+        logger.info("[%s] Pipeline complete.", self.name)

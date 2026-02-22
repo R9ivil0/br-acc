@@ -10,6 +10,10 @@ const resources = {
         disclaimer:
           "Dados de registros públicos. Não constitui acusação.",
       },
+      home: {
+        tagline: "Mapeamento de conexões em dados públicos brasileiros",
+        cta: "Iniciar busca",
+      },
       nav: {
         search: "Buscar",
         graph: "Grafo",
@@ -23,6 +27,7 @@ const resources = {
         filterType: "Filtrar tipo",
         typeAll: "Todos",
         error: "Erro ao buscar. Tente novamente.",
+        emptyHint: "Tente buscar por nome, CPF ou CNPJ",
       },
       entity: {
         person: "Pessoa",
@@ -90,6 +95,10 @@ const resources = {
         disclaimer:
           "Data patterns from public records. Not accusations.",
       },
+      home: {
+        tagline: "Mapping connections in Brazilian public data",
+        cta: "Start searching",
+      },
       nav: {
         search: "Search",
         graph: "Graph",
@@ -103,6 +112,7 @@ const resources = {
         filterType: "Filter type",
         typeAll: "All",
         error: "Search failed. Please try again.",
+        emptyHint: "Try searching by name, CPF, or CNPJ",
       },
       entity: {
         person: "Person",

@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router";
 
 import type { PatternInfo, PatternResult } from "@/api/client";
 import { getEntityPatterns, listPatterns } from "@/api/client";
+import { Spinner } from "@/components/common/Spinner";
 import { PatternCard } from "@/components/pattern/PatternCard";
 import { PatternResultCard } from "@/components/pattern/PatternResultCard";
 
@@ -75,7 +76,7 @@ export function Patterns() {
         {!entityId && (
           <p className={styles.hint}>{t("patterns.selectEntity")}</p>
         )}
-        {loading && <p className={styles.status}>{t("common.loading")}</p>}
+        {loading && <Spinner />}
         {error && <p className={styles.error}>{error}</p>}
         {!loading && entityId && filteredResults.length === 0 && !error && (
           <p className={styles.status}>{t("patterns.noResults")}</p>

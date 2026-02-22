@@ -1,16 +1,21 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 
 import styles from "./AppShell.module.css";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { t, i18n } = useTranslation();
+  const location = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const toggleLang = () => {
     const next = i18n.language === "pt-BR" ? "en" : "pt-BR";
     i18n.changeLanguage(next);
   };
+
+  const navLinkClass = (path: string) =>
+    location.pathname.startsWith(path) ? styles.active : "";
 
   return (
     <div className={styles.shell}>
@@ -18,10 +23,35 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Link to="/" className={styles.logo}>
           {t("app.title")}
         </Link>
-        <nav className={styles.nav}>
-          <Link to="/search">{t("nav.search")}</Link>
-          <Link to="/patterns">{t("nav.patterns")}</Link>
-          <Link to="/investigations">{t("nav.investigations")}</Link>
+        <button
+          className={styles.hamburger}
+          onClick={() => setMenuOpen((prev) => !prev)}
+          aria-label="Menu"
+        >
+          &#9776;
+        </button>
+        <nav className={`${styles.nav} ${menuOpen ? styles.navOpen : ""}`}>
+          <Link
+            to="/search"
+            className={navLinkClass("/search")}
+            onClick={() => setMenuOpen(false)}
+          >
+            {t("nav.search")}
+          </Link>
+          <Link
+            to="/patterns"
+            className={navLinkClass("/patterns")}
+            onClick={() => setMenuOpen(false)}
+          >
+            {t("nav.patterns")}
+          </Link>
+          <Link
+            to="/investigations"
+            className={navLinkClass("/investigations")}
+            onClick={() => setMenuOpen(false)}
+          >
+            {t("nav.investigations")}
+          </Link>
         </nav>
         <button onClick={toggleLang} className={styles.langToggle}>
           {i18n.language === "pt-BR" ? "EN" : "PT"}

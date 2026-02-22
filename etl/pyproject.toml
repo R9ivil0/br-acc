@@ -16,9 +16,11 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
+    "pytest-asyncio>=0.24.0",
     "mypy>=1.14.0",
     "ruff>=0.9.0",
     "pandas-stubs>=2.2.0",
+    "testcontainers[neo4j]>=4.0",
 ]
 resolution = [
     "splink>=4.0.0",
@@ -52,3 +54,7 @@ mypy_path = "src"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "-m 'not integration'"
+markers = [
+    "integration: requires running Neo4j instance",
+]

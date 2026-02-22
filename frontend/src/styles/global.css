@@ -49,6 +49,16 @@
   /* Radius */
   --radius-sm: 4px;
   --radius-md: 8px;
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+
+  /* Focus */
+  --focus-ring: 0 0 0 2px var(--accent);
+
+  /* Hover */
+  --bg-hover: rgba(255, 255, 255, 0.03);
 }
 
 * {
@@ -77,4 +87,13 @@ a:hover {
 ::selection {
   background: var(--accent);
   color: var(--bg-primary);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
