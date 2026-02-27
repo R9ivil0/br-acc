@@ -12,6 +12,8 @@ class SourceAttribution(BaseModel):
 class EntityResponse(BaseModel):
     id: str
     type: str
+    entity_label: str | None = None
+    identity_quality: str | None = None
     properties: dict[str, str | float | int | bool | None]
     sources: list[SourceAttribution]
     is_pep: bool = False

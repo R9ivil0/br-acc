@@ -59,3 +59,25 @@ def _cnpj_check_digits(digits: str) -> bool:
 def validate_cnpj(cnpj: str | None) -> bool:
     digits = strip_document(cnpj)
     return _cnpj_check_digits(digits)
+
+
+def classify_document(doc: str | None) -> str:
+    """Classify a Brazilian document string for identity handling.
+
+    Returns one of:
+    - cpf_valid: 11-digit CPF-like document (masked not allowed)
+    - cpf_partial: masked/partial CPF (LGPD style, 6 visible digits)
+    - cnpj_valid: 14-digit CNPJ-like document
+    - invalid: anything else
+    """
+    raw = (doc or "").strip()
+    digits = strip_document(raw)
+    has_mask = "*" in raw
+
+    if has_mask and len(digits) == 6:
+        return "cpf_partial"
+    if len(digits) == 11:
+        return "cpf_valid"
+    if len(digits) == 14:
+        return "cnpj_valid"
+    return "invalid"

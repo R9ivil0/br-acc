@@ -33,11 +33,30 @@ def _is_pep(properties: dict[str, Any]) -> bool:
     return any(keyword in role for keyword in PEP_ROLES)
 
 
+def _infer_identity_quality(
+    props: dict[str, Any],
+    labels: list[str],
+) -> str | None:
+    if "identity_quality" in props and props["identity_quality"]:
+        return str(props["identity_quality"])
+
+    label_set = set(labels)
+    if "Partner" in label_set:
+        return "partial"
+    if "Person" in label_set:
+        cpf = props.get("cpf")
+        if isinstance(cpf, str) and re.match(r"^\d{3}\.\d{3}\.\d{3}-\d{2}$", cpf):
+            return "strong"
+        return "unknown"
+    return None
+
+
 def _node_to_entity(
     node: Any, labels: list[str], entity_id: str
 ) -> EntityResponse:
     props = dict(node)
     entity_type = labels[0].lower() if labels else "unknown"
+    entity_label = labels[0] if labels else None
     sources = []
     if "source" in props:
         source_val = props.pop("source")
@@ -45,9 +64,12 @@ def _node_to_entity(
             sources = [SourceAttribution(database=s) for s in source_val]
         elif isinstance(source_val, str):
             sources = [SourceAttribution(database=source_val)]
+    identity_quality = _infer_identity_quality(props, labels)
     return EntityResponse(
         id=entity_id,
         type=entity_type,
+        entity_label=entity_label,
+        identity_quality=identity_quality,
         properties=sanitize_props(props),
         sources=sources,
         is_pep=_is_pep(props),
@@ -163,9 +185,16 @@ async def get_connections(
     session: Annotated[AsyncSession, Depends(get_session)],
     depth: Annotated[int, Query(ge=1, le=4)] = 2,
     types: Annotated[str | None, Query()] = None,
+    include_probable: Annotated[bool, Query()] = False,
 ) -> EntityWithConnections:
     records = await execute_query(
-        session, "entity_connections", {"entity_id": entity_id, "depth": depth}
+        session,
+        "entity_connections",
+        {
+            "entity_id": entity_id,
+            "depth": depth,
+            "include_probable": include_probable,
+        },
     )
 
     if not records:

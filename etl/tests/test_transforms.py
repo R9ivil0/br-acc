@@ -1,4 +1,5 @@
 from icarus_etl.transforms import (
+    classify_document,
     deduplicate_rows,
     format_cnpj,
     format_cpf,
@@ -63,6 +64,14 @@ class TestDocumentFormatting:
         assert validate_cnpj("12345678000199") is False
         assert validate_cnpj("123") is False
         assert validate_cnpj(None) is False
+
+    def test_classify_document(self) -> None:
+        assert classify_document("12345678901") == "cpf_valid"
+        assert classify_document("123.456.789-01") == "cpf_valid"
+        assert classify_document("***123456**") == "cpf_partial"
+        assert classify_document("***.123.456-**") == "cpf_partial"
+        assert classify_document("12.345.678/0001-99") == "cnpj_valid"
+        assert classify_document("123") == "invalid"
 
 
 class TestDeduplication:

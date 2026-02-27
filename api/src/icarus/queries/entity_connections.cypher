@@ -1,9 +1,16 @@
 MATCH (center) WHERE elementId(center) = $entity_id
-  AND (center:Person OR center:Company OR center:Contract OR center:Sanction OR center:Election
+  AND (center:Person OR center:Partner OR center:Company OR center:Contract OR center:Sanction OR center:Election
        OR center:Amendment OR center:Finance OR center:Embargo OR center:Health OR center:Education
        OR center:Convenio OR center:LaborStats OR center:PublicOffice)
+WITH center,
+     CASE
+       WHEN coalesce($include_probable, false) THEN
+         "SOCIO_DE|DOOU|CANDIDATO_EM|VENCEU|AUTOR_EMENDA|SANCIONADA|OPERA_UNIDADE|DEVE|RECEBEU_EMPRESTIMO|EMBARGADA|MANTEDORA_DE|BENEFICIOU|GEROU_CONVENIO|SAME_AS|POSSIBLE_SAME_AS"
+       ELSE
+         "SOCIO_DE|DOOU|CANDIDATO_EM|VENCEU|AUTOR_EMENDA|SANCIONADA|OPERA_UNIDADE|DEVE|RECEBEU_EMPRESTIMO|EMBARGADA|MANTEDORA_DE|BENEFICIOU|GEROU_CONVENIO|SAME_AS"
+     END AS relationship_filter
 CALL apoc.path.subgraphAll(center, {
-  relationshipFilter: "SOCIO_DE|DOOU|CANDIDATO_EM|VENCEU|AUTOR_EMENDA|SANCIONADA|OPERA_UNIDADE|DEVE|RECEBEU_EMPRESTIMO|EMBARGADA|MANTEDORA_DE|BENEFICIOU|GEROU_CONVENIO|SAME_AS",
+  relationshipFilter: relationship_filter,
   labelFilter: "-User|-Investigation|-Annotation|-Tag",
   maxLevel: $depth,
   limit: 200

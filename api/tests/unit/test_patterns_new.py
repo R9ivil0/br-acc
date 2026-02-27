@@ -60,6 +60,23 @@ async def test_run_unknown_pattern_returns_empty() -> None:
 
 
 @pytest.mark.anyio
+async def test_run_pattern_forwards_include_probable_parameter() -> None:
+    mock_record = MagicMock()
+    mock_record.__iter__ = lambda self: iter(["pattern_id"])
+    mock_record.__getitem__ = lambda self, key: {"pattern_id": "debtor_contracts"}[key]
+
+    session = AsyncMock()
+
+    with patch("icarus.services.pattern_service.execute_query", new_callable=AsyncMock) as mock_eq:
+        mock_eq.return_value = [mock_record]
+        await run_pattern(session, "debtor_contracts", include_probable=True)
+
+    mock_eq.assert_awaited_once()
+    _session, _query_name, params = mock_eq.await_args.args[:3]
+    assert params["include_probable"] is True
+
+
+@pytest.mark.anyio
 async def test_debtor_contracts_returns_results() -> None:
     mock_record = MagicMock()
     mock_record.__iter__ = lambda self: iter([

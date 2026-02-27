@@ -190,10 +190,12 @@ def test_graph_expand_query_includes_same_as() -> None:
 
 
 def test_entity_connections_query_includes_same_as() -> None:
-    """Verify entity_connections.cypher traverses SAME_AS relationships."""
+    """Verify entity_connections.cypher supports SAME_AS and optional probable links."""
     CypherLoader.clear_cache()
     cypher = CypherLoader.load("entity_connections")
     assert "SAME_AS" in cypher
+    assert "POSSIBLE_SAME_AS" in cypher
+    assert "$include_probable" in cypher
 
 
 @pytest.mark.anyio

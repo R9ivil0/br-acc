@@ -1,82 +1,97 @@
 # ICARUS Data Source Catalog
 
-**19 loaded | 1 pipeline ready | 65+ not yet built**
-Last updated: 2026-02-25
+**38 loaded | 3 pipelines pending data | 60+ not yet built**
+Last updated: 2026-02-26
 
 ---
 
-## 1. LOADED (19 sources)
+## 1. LOADED (38 sources)
 
 All sources below have working ETL pipelines in `etl/src/icarus_etl/pipelines/` and are loaded into production Neo4j.
 
-| # | Source | URL | Format | Nodes Created | Rels Created | Volume |
-|---|--------|-----|--------|---------------|--------------|--------|
-| 1 | CNPJ (Receita Federal) | dadosabertos.rfb.gov.br | Bulk CSV (37 ZIPs) | 53.6M Company, 1.98M Person | 24.6M SOCIO_DE | ~85GB uncompressed |
-| 2 | TSE (Elections) | dadosabertos.tse.jus.br | Bulk CSV | 2.38M Person, 16.7K Election | 8.2M DOOU, 2.93M CANDIDATO_EM | 2002-2024, 28.7M donations |
-| 3 | Transparencia (Contracts) | portaldatransparencia.gov.br | Bulk CSV | 38K Contract, 27.6K Amendment | 32K VENCEU, 29K AUTOR_EMENDA | Federal contracts |
-| 4 | CEIS/CNEP (Sanctions) | portaldatransparencia.gov.br | CSV/API | 23.8K Sanction | 23.8K SANCIONADA | Banned companies/persons |
-| 5 | BNDES (Dev. Bank Loans) | dadosabertos.bndes.gov.br | CSV | 9.2K Finance | 8.7K RECEBEU_EMPRESTIMO | All public loan operations |
-| 6 | PGFN (Tax Debt) | dados.pgfn.fazenda.gov.br | Bulk CSV | 24M Finance | 24M DEVE | Divida ativa da Uniao |
-| 7 | ComprasNet/PNCP | compras.dados.gov.br | CSV/API | 1.08M Contract | 1.07M VENCEU | Federal procurement |
-| 8 | TCU (Audit Sanctions) | portal.tcu.gov.br/dados-abertos | CSV | 45K Sanction | 45K SANCIONADA | Inabilitados/inidoneos |
-| 9 | TransfereGov | plataforma.transferegov.sistema.gov.br | CSV | 71K Amendment, 67K Convenio | 320K BENEFICIOU, 70K GEROU_CONVENIO | Federal transfers |
-| 10 | RAIS (Labor Stats) | dados.gov.br | CSV | 29.5K LaborStats | -- | Aggregate by CNAE+UF (no CPF) |
-| 11 | INEP (Education) | dados.gov.br | CSV | 224K Education | 18K MANTEDORA_DE | Education census |
-| 12 | DATASUS/CNES | cnes.datasus.gov.br | API (Open Data) | 602K Health | 435K OPERA_UNIDADE | Health facility registry |
-| 13 | IBAMA (Embargoes) | servicos.ibama.gov.br | API | 79K Embargo | 79K EMBARGADA | Environmental enforcement |
-| 14 | Camara (Expenses) | dadosabertos.camara.leg.br | CSV | 4.6M Expense | 4.6M GASTOU, 4.9M FORNECEU | Deputy CEAP expenses |
-| 15 | Senado (Expenses) | www12.senado.leg.br/transparencia | CSV | 272K Expense | 272K FORNECEU | Senator CEAPS expenses |
-| 16 | ICIJ (Offshore Leaks) | offshoreleaks.icij.org | Bulk CSV | 4.8K OffshoreEntity, 6.6K OffshoreOfficer | 2.3K OFFICER_OF | Panama/Paradise/Pandora papers |
-| 17 | OpenSanctions (Global PEPs) | opensanctions.org | Bulk JSON | 118K GlobalPEP | 7.6K GLOBAL_PEP_MATCH | Name-matched to Brazilian entities |
-| 18 | CVM (Proceedings) | dados.cvm.gov.br | CSV (ZIP) | 522 CVMProceeding | 1.1K CVM_SANCIONADA | Securities sanctions |
-| 19 | Servidores (Public Servants) | portaldatransparencia.gov.br | Bulk CSV | 635K PublicOffice, 632K Person | 636K RECEBEU_SALARIO, 36K SAME_AS | Federal servants + salaries |
+| # | Source | Pipeline | Nodes Created | Rels Created | Notes |
+|---|--------|----------|---------------|--------------|-------|
+| 1 | CNPJ (Receita Federal) | `cnpj` | 53.6M Company, 1.98M Person | 24.6M SOCIO_DE | ~85GB uncompressed |
+| 2 | TSE (Elections + Donations) | `tse` | 7.1M Person, 101K Election | 8.2M DOOU, 2.93M CANDIDATO_EM | 2002-2024 historical |
+| 3 | Transparencia (Contracts) | `transparencia` | 38K Contract, 27.6K Amendment | 32K VENCEU, 29K AUTOR_EMENDA | Federal contracts |
+| 4 | CEIS/CNEP (Sanctions) | `sanctions` | 23.8K Sanction | 23.8K SANCIONADA | Banned companies/persons |
+| 5 | BNDES (Dev. Bank Loans) | `bndes` | 9.2K Finance | 8.7K RECEBEU_EMPRESTIMO | |
+| 6 | PGFN (Tax Debt) | `pgfn` | 24M Finance | 24M DEVE | Divida ativa da Uniao |
+| 7 | ComprasNet (Contracts) | `comprasnet` | 1.08M Contract | 1.07M VENCEU | Federal procurement |
+| 8 | TCU (Audit Sanctions) | `tcu` | 45K Sanction | 45K SANCIONADA | Inabilitados/inidoneos |
+| 9 | TransfereGov | `transferegov` | 71K Amendment, 67K Convenio | 320K BENEFICIOU, 70K GEROU_CONVENIO | Federal transfers |
+| 10 | RAIS (Labor Stats) | `rais` | 29.5K LaborStats | -- | Aggregate by CNAE+UF (no CPF) |
+| 11 | INEP (Education) | `inep` | 224K Education | 18K MANTEDORA_DE | Education census |
+| 12 | DATASUS/CNES | `datasus` | 602K Health | 435K OPERA_UNIDADE | Health facility registry |
+| 13 | IBAMA (Embargoes) | `ibama` | 79K Embargo | 79K EMBARGADA | Environmental enforcement |
+| 14 | DOU (Official Gazette) | `dou` | 3.98M DOUAct | 169K MENCIONOU, 13K PUBLICOU | Parquet via BigQuery |
+| 15 | Camara (Expenses) | `camara` | 4.6M Expense | 4.6M GASTOU, 4.9M FORNECEU | Deputy CEAP expenses |
+| 16 | Senado (Expenses) | `senado` | 272K Expense | 272K FORNECEU | Senator CEAPS expenses |
+| 17 | ICIJ (Offshore Leaks) | `icij` | 4.8K OffshoreEntity, 6.6K OffshoreOfficer | 2.3K OFFICER_OF | Panama/Paradise/Pandora papers |
+| 18 | OpenSanctions (Global PEPs) | `opensanctions` | 118K GlobalPEP | 7.6K GLOBAL_PEP_MATCH | Name-matched to Brazilian entities |
+| 19 | CVM (Proceedings) | `cvm` | 522 CVMProceeding | 1.1K CVM_SANCIONADA | Securities sanctions |
+| 20 | CVM Funds | `cvm_funds` | 41K Fund | -- | Investment fund registry |
+| 21 | Servidores (Public Servants) | *(transparencia)* | 635K PublicOffice | 636K RECEBEU_SALARIO | Federal servants + salaries |
+| 22 | CEAF (Expelled Servants) | `ceaf` | 4.1K Expulsion | 4.1K EXPULSO | Fired for misconduct |
+| 23 | CEPIM (Barred NGOs) | `cepim` | 3.6K BarredNGO | 3.6K IMPEDIDA | NGOs barred from agreements |
+| 24 | CPGF (Govt Credit Cards) | `cpgf` | 1.46M GovCardExpense | -- | LGPD masks CPFs |
+| 25 | Viagens a Servico | `viagens` | 3.71M GovTravel | -- | LGPD masks CPFs |
+| 26 | Renuncias Fiscais | `renuncias` | 291.8K TaxWaiver | 291.8K RECEBEU_RENUNCIA | R$414B+ in tax waivers |
+| 27 | Acordos de Leniencia | `leniency` | 112 LeniencyAgreement | -- | Companies that confessed |
+| 28 | BCB Penalidades | `bcb` | 3.5K BCBPenalty | -- | Fines on financial institutions |
+| 29 | STF (Supreme Court) | `stf` | 2.38M LegalCase | -- | Supreme court proceedings |
+| 30 | PEP CGU | `pep_cgu` | 133.8K PEPRecord | -- | Politically exposed persons |
+| 31 | TSE Bens (Candidate Assets) | `tse_bens` | 14.3M DeclaredAsset | 14.3M DECLAROU_BEM | Declared patrimony |
+| 32 | TSE Filiados | `tse_filiados` | 16.5M PartyMembership | -- | Party membership history |
+| 33 | OFAC SDN | `ofac` | 39.2K InternationalSanction* | -- | US Treasury sanctions |
+| 34 | EU Sanctions | `eu_sanctions` | *(merged above)* | -- | EU consolidated sanctions |
+| 35 | UN Sanctions | `un_sanctions` | *(merged above)* | -- | UN Security Council sanctions |
+| 36 | World Bank Debarment | `world_bank` | *(merged above)* | -- | Debarred firms |
+| 37 | Holdings (CNPJ derived) | `holdings` | -- | 59K HOLDING_DE | Derived from CNPJ socios |
+| 38 | SIOP (Budget Amendments) | `siop` | 71.1K Amendment | -- | Parliamentary amendment execution |
+| 39 | Senado CPIs | `senado_cpis` | 3 CPI | -- | Congressional investigations |
 
-**Production totals:** 96.8M nodes, 71.4M relationships across 20 node labels and 20+ relationship types.
+*\* InternationalSanction: 39.2K total across OFAC + EU + UN + World Bank*
+
+**Production totals (2026-02-26):** ~141M nodes, ~92M relationships across 35 node labels and 33 relationship types.
 
 ---
 
-## 2. PIPELINE READY (1 source)
+## 2. PIPELINE EXISTS — DATA PENDING (3 sources)
 
-| Source | Pipeline | Status | Workaround |
-|--------|----------|--------|------------|
-| DOU (Diario Oficial da Uniao) | `etl/src/icarus_etl/pipelines/dou.py` | Blocked: Querido Diario API returns Cloudflare challenge pages | Use official Imprensa Nacional XML dumps at `in.gov.br/acesso-a-informacao/dados-abertos/base-de-dados`. Alternative: Scrapling library for stealth browser fetching. |
+| Source | Pipeline | Status | Blocker |
+|--------|----------|--------|---------|
+| PNCP (Bid Publications) | `pncp` | Downloading — 35 files (2021-08→2024-06), still running to 2026-02 | Time — API paginates by month |
+| SICONFI (Municipal Finance) | `siconfi` | Downloading 2024 data (~530K/700K rows), pipeline fixed (CSV not JSON) | Time — 5,570 municipalities × 5 years |
+| CAGED (Labor Movements) | `caged` | Pipeline rewritten as aggregate LaborStats. Needs re-download from PDET FTP | Public data has no employer CNPJ. FTP URL: `ftp://ftp.mtps.gov.br/pdet/microdados/NOVO CAGED/` |
 
 ---
 
-## 3. NOT BUILT (65+ sources)
+## 3. NOT YET BUILT (60+ sources)
 
-### 3.1 CGU / Transparencia Portal (8 sources)
-
-| # | Source | URL | Format | Est. Volume | Nodes/Rels | Value | Notes |
-|---|--------|-----|--------|-------------|------------|-------|-------|
-| 1 | CGU PEP List | portaldatransparencia.gov.br/download-de-dados/pep | CSV | ~100K | Person(pep=true) | HIGH | Replaces hardcoded PEP_ROLES frozenset |
-| 2 | CEAF (Expelled Servants) | portaldatransparencia.gov.br/download-de-dados/ceaf | CSV + API | ~10K | Expulsion nodes | HIGH | Fired for misconduct |
-| 3 | CEPIM (Barred NGOs) | portaldatransparencia.gov.br/download-de-dados/cepim | CSV | ~5K | BarredNGO nodes | MEDIUM | NGOs barred from new agreements |
-| 4 | Acordos de Leniencia | portaldatransparencia.gov.br/download-de-dados/acordos-leniencia | CSV | ~34 records | LeniencyAgreement nodes | VERY HIGH | Companies that confessed wrongdoing |
-| 5 | CPGF (Govt Credit Cards) | portaldatransparencia.gov.br/download-de-dados/cpgf | Bulk CSV | Millions/yr | GovCardExpense nodes | HIGH | Corporate credit card spending |
-| 6 | Viagens a Servico | portaldatransparencia.gov.br/download-de-dados/viagens | CSV | ~500K/yr | GovTravel nodes | MEDIUM | Government travel expenses |
-| 7 | Bolsa Familia/BPC | portaldatransparencia.gov.br/download-de-dados/bolsa-familia-pagamentos | CSV | ~20M | SocialBenefit nodes | LOW | CPFs masked by LGPD |
-| 8 | Renuncias Fiscais | portaldatransparencia.gov.br/download-de-dados/renuncias | CSV | Millions | TaxWaiver nodes | HIGH | R$414B+ in tax waivers |
-
-### 3.2 BCB / Central Bank (5 sources)
+### 3.1 CGU / Transparencia Portal
 
 | # | Source | URL | Format | Est. Volume | Nodes/Rels | Value | Notes |
 |---|--------|-----|--------|-------------|------------|-------|-------|
-| 9 | BCB Penalidades | dados.bcb.gov.br | CSV | ~10K | BankPenalty nodes | HIGH | Fines on financial institutions |
-| 10 | BCB Multas | dados.bcb.gov.br | CSV | ~5K | BankFine nodes | HIGH | Administrative fines |
-| 11 | ESTBAN | dados.bcb.gov.br | CSV | ~500K/mo | BankingStats nodes | LOW | Bank branch balance sheets |
-| 12 | IF.data | dados.bcb.gov.br | CSV | ~2K quarterly | FinancialInstitution nodes | LOW | Financial institution metrics |
-| 13 | BCB Liquidacao | dados.bcb.gov.br | CSV | ~200 | BankLiquidation nodes | MEDIUM | Liquidated financial institutions |
+| 1 | Bolsa Familia/BPC | portaldatransparencia.gov.br/download-de-dados/bolsa-familia-pagamentos | CSV | ~20M | SocialBenefit nodes | LOW | CPFs masked by LGPD |
 
-### 3.3 Judiciary (5 sources)
+### 3.2 BCB / Central Bank
 
 | # | Source | URL | Format | Est. Volume | Nodes/Rels | Value | Notes |
 |---|--------|-----|--------|-------------|------------|-------|-------|
-| 14 | CNJ DataJud | api-publica.datajud.cnj.jus.br | REST API (self-service key) | Tens of millions | LegalCase nodes | VERY HIGH | Proceedings across all courts |
-| 15 | STJ Dados Abertos | dadosabertos.stj.jus.br | CSV/XML | ~500K | LegalCase nodes | HIGH | Superior court decisions |
-| 16 | CNCIAI (Improbidade) | cnj.jus.br (part of DataJud) | API | ~10K | ImprobityCase nodes | VERY HIGH | Administrative misconduct convictions |
-| 17 | CARF (Tax Appeals) | carf.fazenda.gov.br | Structured | ~500K | TaxAppeal nodes | MEDIUM | Federal tax appeal decisions |
-| 18 | STF via BigQuery | basedosdados.org (br_stf_corte_aberta) | BigQuery | ~100K | SupremeCourtCase nodes | MEDIUM | Supreme court votes |
+| 2 | BCB Multas | dados.bcb.gov.br | CSV | ~5K | BankFine nodes | HIGH | Administrative fines |
+| 3 | ESTBAN | dados.bcb.gov.br | CSV | ~500K/mo | BankingStats nodes | LOW | Bank branch balance sheets |
+| 4 | IF.data | dados.bcb.gov.br | CSV | ~2K quarterly | FinancialInstitution nodes | LOW | Financial institution metrics |
+| 5 | BCB Liquidacao | dados.bcb.gov.br | CSV | ~200 | BankLiquidation nodes | MEDIUM | Liquidated financial institutions |
+
+### 3.3 Judiciary
+
+| # | Source | URL | Format | Est. Volume | Nodes/Rels | Value | Notes |
+|---|--------|-----|--------|-------------|------------|-------|-------|
+| 6 | CNJ DataJud | api-publica.datajud.cnj.jus.br | REST API (self-service key) | Tens of millions | LegalCase nodes | VERY HIGH | Proceedings across all courts |
+| 7 | STJ Dados Abertos | dadosabertos.stj.jus.br | CSV/XML | ~500K | LegalCase nodes | HIGH | Superior court decisions |
+| 8 | CNCIAI (Improbidade) | cnj.jus.br (part of DataJud) | API | ~10K | ImprobityCase nodes | VERY HIGH | Administrative misconduct convictions |
+| 9 | CARF (Tax Appeals) | carf.fazenda.gov.br | Structured | ~500K | TaxAppeal nodes | MEDIUM | Federal tax appeal decisions |
 
 ### 3.4 Regulatory Agencies (11 sources)
 

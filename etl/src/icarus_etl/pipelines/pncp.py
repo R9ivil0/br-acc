@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -71,6 +72,58 @@ class PncpPipeline(Pipeline):
         super().__init__(driver, data_dir, limit=limit, chunk_size=chunk_size)
         self._raw_records: list[dict[str, Any]] = []
         self.bids: list[dict[str, Any]] = []
+        self.coverage_start: str = ""
+        self.coverage_end: str = ""
+        self.coverage_complete: bool = False
+
+    def _infer_coverage(
+        self,
+        src_dir: Path,
+        json_files: list[Path],
+        records: list[dict[str, Any]],
+    ) -> None:
+        """Infer PNCP dataset coverage window.
+
+        Priority:
+        1. Explicit manifest file (coverage.json) if available.
+        2. Min/max from dataPublicacaoPncp in loaded records.
+        3. Min/max month inferred from file names.
+        """
+        manifest_path = src_dir / "coverage.json"
+        if manifest_path.exists():
+            try:
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                self.coverage_start = str(manifest.get("coverage_start", "")).strip()
+                self.coverage_end = str(manifest.get("coverage_end", "")).strip()
+                self.coverage_complete = bool(manifest.get("coverage_complete", False))
+                return
+            except Exception:
+                logger.warning("Invalid PNCP coverage manifest: %s", manifest_path)
+
+        dates: list[str] = []
+        for rec in records:
+            raw_date = str(rec.get("dataPublicacaoPncp", "")).strip()
+            if len(raw_date) >= 10:
+                candidate = raw_date[:10]
+                if re.fullmatch(r"\d{4}-\d{2}-\d{2}", candidate):
+                    dates.append(candidate)
+        if dates:
+            self.coverage_start = min(dates)
+            self.coverage_end = max(dates)
+            self.coverage_complete = False
+            return
+
+        month_candidates: list[str] = []
+        for f in json_files:
+            match = re.search(r"(\d{4})(\d{2})", f.stem)
+            if match:
+                month_candidates.append(f"{match.group(1)}-{match.group(2)}")
+        if month_candidates:
+            first_month = min(month_candidates)
+            last_month = max(month_candidates)
+            self.coverage_start = f"{first_month}-01"
+            self.coverage_end = f"{last_month}-31"
+            self.coverage_complete = False
 
     def extract(self) -> None:
         """Load pre-downloaded PNCP JSON files from data/pncp/."""
@@ -99,6 +152,13 @@ class PncpPipeline(Pipeline):
 
         logger.info("Total raw records: %d", len(all_records))
         self._raw_records = all_records
+        self._infer_coverage(src_dir, json_files, all_records)
+        logger.info(
+            "PNCP coverage window: start=%s end=%s complete=%s",
+            self.coverage_start or "unknown",
+            self.coverage_end or "unknown",
+            self.coverage_complete,
+        )
 
     def transform(self) -> None:
         """Normalize fields, format CNPJs, deduplicate by bid_id."""
@@ -180,6 +240,9 @@ class PncpPipeline(Pipeline):
                 "processo": str(rec.get("processo", "")).strip(),
                 "srp": bool(rec.get("srp", False)),
                 "source": "pncp",
+                "coverage_start": self.coverage_start,
+                "coverage_end": self.coverage_end,
+                "coverage_complete": self.coverage_complete,
             })
 
         self.bids = deduplicate_rows(bids, ["bid_id"])
@@ -218,6 +281,9 @@ class PncpPipeline(Pipeline):
                 "processo": b["processo"],
                 "srp": b["srp"],
                 "source": b["source"],
+                "coverage_start": b["coverage_start"],
+                "coverage_end": b["coverage_end"],
+                "coverage_complete": b["coverage_complete"],
             }
             for b in self.bids
         ]

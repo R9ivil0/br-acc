@@ -69,6 +69,10 @@ scripts/audit-prompts/
 # Screenshots and images (large binary files)
 *.png
 
+# Local report artifacts in repository root
+/*.pdf
+/*.html
+
 # Playwright MCP cache
 .playwright-mcp/
 
@@ -79,3 +83,6 @@ scripts/audit-prompts/
 data/comprasnet/
 data/rais/
 data/tse/
+
+# Local MCP runtime config (keep example only)
+.mcp.json

@@ -27,7 +27,6 @@ BQ_TABLE = "basedosdados.br_me_caged.microdados_movimentacao"
 COLUMNS = [
     "ano",
     "mes",
-    "cnpj_raiz",
     "sigla_uf",
     "id_municipio",
     "cnae_2_secao",

@@ -35,7 +35,8 @@
 /* === Shell layout === */
 .shell {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 /* === Sidebar === */
@@ -207,6 +208,5 @@
 
 .main {
   flex: 1;
-  padding: var(--space-lg);
-  overflow-y: auto;
+  overflow: hidden;
 }

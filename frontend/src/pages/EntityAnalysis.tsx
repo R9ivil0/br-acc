@@ -211,6 +211,10 @@ export function EntityAnalysis() {
     [setSelectedNodeId],
   );
 
+  const handleNodeDeselect = useCallback(() => {
+    setSelectedNodeId(null);
+  }, [setSelectedNodeId]);
+
   // Investigation modal handlers
   const handleOpenInvModal = useCallback(() => {
     setShowInvModal(true);
@@ -308,6 +312,7 @@ export function EntityAnalysis() {
                     hoveredNodeId={hoveredNodeId}
                     layoutMode={graphStore.layoutMode}
                     onNodeClick={handleNodeClick}
+                    onNodeDeselect={handleNodeDeselect}
                     onNodeHover={setHoveredNodeId}
                     onNodeRightClick={() => {}}
                     onLayoutChange={graphStore.setLayoutMode}

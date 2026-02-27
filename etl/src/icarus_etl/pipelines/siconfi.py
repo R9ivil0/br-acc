@@ -6,6 +6,8 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import pandas as pd
+
 from icarus_etl.base import Pipeline
 
 if TYPE_CHECKING:
@@ -47,6 +49,14 @@ class SiconfiPipeline(Pipeline):
         siconfi_dir = Path(self.data_dir) / "siconfi"
         all_records: list[dict[str, Any]] = []
 
+        # Read CSV files produced by download_siconfi.py
+        csv_files = sorted(siconfi_dir.glob("dca_*.csv"))
+        for csv_file in csv_files:
+            df = pd.read_csv(csv_file, dtype=str, keep_default_na=False)
+            all_records.extend(df.to_dict("records"))  # type: ignore[arg-type]
+            logger.info("  Loaded %d records from %s", len(df), csv_file.name)
+
+        # Fallback: also try JSON if present (original API format)
         for json_file in sorted(siconfi_dir.glob("*.json")):
             with open(json_file, encoding="utf-8") as f:
                 data = json.load(f)
@@ -68,7 +78,10 @@ class SiconfiPipeline(Pipeline):
             if not cod_ibge:
                 continue
 
-            ente = normalize_name(str(row.get("ente", "")))
+            # CSV uses "instituicao", API JSON uses "ente"
+            ente = normalize_name(
+                str(row.get("instituicao", "") or row.get("ente", ""))
+            )
             exercicio = str(row.get("exercicio", "")).strip()
             conta = str(row.get("conta", "")).strip()
             coluna = str(row.get("coluna", "")).strip()
@@ -82,6 +95,7 @@ class SiconfiPipeline(Pipeline):
             except (ValueError, TypeError):
                 continue
 
+            # CNPJ may be in API JSON but not in CSV downloads
             cnpj_raw = str(row.get("cnpj", "")).strip()
             cnpj_digits = strip_document(cnpj_raw)
             cnpj_formatted = format_cnpj(cnpj_raw) if len(cnpj_digits) == 14 else ""

@@ -1,3 +1,5 @@
+from unittest.mock import AsyncMock, patch
+
 import pytest
 from httpx import AsyncClient
 
@@ -48,6 +50,33 @@ async def test_invalid_pattern_returns_404(client: AsyncClient) -> None:
     response = await client.get("/api/v1/patterns/test-id/nonexistent_pattern")
     assert response.status_code == 404
     assert "Pattern not found" in response.json()["detail"]
+
+
+@pytest.mark.anyio
+async def test_patterns_endpoint_forwards_include_probable(client: AsyncClient) -> None:
+    with patch("icarus.routers.patterns.run_all_patterns", new_callable=AsyncMock) as mock_run_all:
+        mock_run_all.return_value = []
+        response = await client.get("/api/v1/patterns/test-id?include_probable=true")
+    assert response.status_code == 200
+    mock_run_all.assert_awaited_once()
+    _driver, _entity_id, _lang = mock_run_all.await_args.args
+    assert _entity_id == "test-id"
+    assert mock_run_all.await_args.kwargs["include_probable"] is True
+
+
+@pytest.mark.anyio
+async def test_specific_pattern_endpoint_forwards_include_probable(client: AsyncClient) -> None:
+    with patch("icarus.routers.patterns.run_pattern", new_callable=AsyncMock) as mock_run_one:
+        mock_run_one.return_value = []
+        response = await client.get(
+            "/api/v1/patterns/test-id/debtor_contracts?include_probable=true",
+        )
+    assert response.status_code == 200
+    mock_run_one.assert_awaited_once()
+    _session, _pattern_name, _entity_id, _lang = mock_run_one.await_args.args
+    assert _pattern_name == "debtor_contracts"
+    assert _entity_id == "test-id"
+    assert mock_run_one.await_args.kwargs["include_probable"] is True
 
 
 def test_patrimony_query_guards_divide_by_zero() -> None:

@@ -98,6 +98,7 @@ export function GraphExplorer() {
                 hoveredNodeId={store.hoveredNodeId}
                 layoutMode={store.layoutMode}
                 onNodeClick={(id) => store.selectNode(id)}
+                onNodeDeselect={() => store.selectNode(null)}
                 onNodeHover={(id) => store.setHoveredNode(id)}
                 onNodeRightClick={(x, y, nodeId) => store.setContextMenu({ x, y, nodeId })}
                 onLayoutChange={store.setLayoutMode}

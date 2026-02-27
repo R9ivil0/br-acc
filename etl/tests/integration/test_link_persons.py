@@ -1,4 +1,4 @@
-"""Integration tests for link_persons.cypher — Phase 4 and Phase 5.
+"""Integration tests for link_persons.cypher.
 
 Runs against a real Neo4j testcontainer to verify SAME_AS relationships
 are created with correct confidence, method, and uniqueness guards.
@@ -96,7 +96,7 @@ def _count_same_as(
 
 @pytest.mark.integration
 def test_phase4_partial_cpf_name_match(neo4j_driver: Driver) -> None:
-    """Servidor with cpf_partial matching person cpf_middle6 + same name."""
+    """Phase 4 is disabled: partial CPF matching must not create SAME_AS."""
     _clear_db(neo4j_driver)
     _setup(
         neo4j_driver,
@@ -112,15 +112,7 @@ def test_phase4_partial_cpf_name_match(neo4j_driver: Driver) -> None:
 
     _run_phases(neo4j_driver, [4])
 
-    with neo4j_driver.session() as s:
-        result = s.run(
-            "MATCH ()-[r:SAME_AS]->() "
-            "RETURN r.confidence AS conf, r.method AS method"
-        )
-        records = list(result)
-        assert len(records) == 1
-        assert records[0]["conf"] == 0.95
-        assert records[0]["method"] == "partial_cpf_name_match"
+    assert _count_same_as(neo4j_driver) == 0
 
 
 @pytest.mark.integration
@@ -148,7 +140,7 @@ def test_phase4_no_match_different_name(neo4j_driver: Driver) -> None:
 def test_phase4_no_duplicate_if_already_linked(
     neo4j_driver: Driver,
 ) -> None:
-    """Running Phase 4 twice should not create duplicate SAME_AS."""
+    """Running disabled Phase 4 twice must still create no SAME_AS."""
     _clear_db(neo4j_driver)
     _setup(
         neo4j_driver,
@@ -165,7 +157,7 @@ def test_phase4_no_duplicate_if_already_linked(
     _run_phases(neo4j_driver, [4])
     _run_phases(neo4j_driver, [4])  # idempotent
 
-    assert _count_same_as(neo4j_driver) == 1
+    assert _count_same_as(neo4j_driver) == 0
 
 
 # ── Phase 5 tests ──────────────────────────────────────────────────
@@ -296,7 +288,7 @@ def test_phase5_servidor_with_cpf_partial_skipped(
     """Servidor with cpf_partial IS NOT NULL should not match in Phase 5.
 
     Phase 5 only handles blank-CPF servidores (cpf_partial IS NULL).
-    Those with cpf_partial are handled by Phase 4.
+    Partial-CPF matching is intentionally disabled.
     """
     _clear_db(neo4j_driver)
     _setup(

@@ -1,7 +1,8 @@
 .page {
   display: flex;
   gap: var(--space-md);
-  height: calc(100vh - 120px);
+  height: 100%;
+  padding: var(--space-lg);
 }
 
 .sidebar {

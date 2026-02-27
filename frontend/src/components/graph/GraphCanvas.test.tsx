@@ -39,6 +39,7 @@ const defaultProps = {
   hoveredNodeId: null,
   layoutMode: "force" as const,
   onNodeClick: vi.fn(),
+  onNodeDeselect: vi.fn(),
   onNodeHover: vi.fn(),
   onNodeRightClick: vi.fn(),
   onLayoutChange: vi.fn(),

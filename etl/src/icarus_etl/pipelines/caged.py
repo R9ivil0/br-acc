@@ -12,11 +12,7 @@ from icarus_etl.base import Pipeline
 if TYPE_CHECKING:
     from neo4j import Driver
 from icarus_etl.loader import Neo4jBatchLoader
-from icarus_etl.transforms import (
-    deduplicate_rows,
-    format_cnpj,
-    strip_document,
-)
+from icarus_etl.transforms import deduplicate_rows
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +27,25 @@ _MOVEMENT_TYPES: dict[str, str] = {
 _READ_CHUNK_SIZE = 100_000
 
 
-def _generate_movement_id(cnpj_digits: str, cpf_digits: str, date: str, mtype: str) -> str:
-    """Deterministic ID from CNPJ + CPF + date + movement type."""
-    raw = f"{cnpj_digits}:{cpf_digits}:{date}:{mtype}"
+def _generate_stats_id(
+    year: str,
+    month: str,
+    uf: str,
+    municipality_code: str,
+    cnae_subclass: str,
+    cbo_code: str,
+    movement_type: str,
+) -> str:
+    """Deterministic id for aggregate CAGED buckets."""
+    raw = "|".join([
+        year,
+        month.zfill(2),
+        uf,
+        municipality_code,
+        cnae_subclass,
+        cbo_code,
+        movement_type,
+    ])
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
@@ -61,11 +73,10 @@ def _parse_salary(raw: str) -> float | None:
 
 
 class CagedPipeline(Pipeline):
-    """ETL pipeline for CAGED labor movement data (admissions/dismissals).
+    """ETL pipeline for CAGED labor movement data (aggregate-only mode).
 
-    Uses stream-and-load pattern: reads CSVs in chunks, transforms and loads
-    each chunk to Neo4j immediately, then discards. Never accumulates the
-    full dataset in memory (~80M+ rows across all years).
+    Public CAGED data is treated as aggregate labor signal. This pipeline
+    intentionally avoids Person/Company linkage and only writes LaborStats nodes.
     """
 
     name = "caged"
@@ -90,115 +101,115 @@ class CagedPipeline(Pipeline):
     def transform(self) -> None:
         pass  # Transform happens per chunk in load()
 
-    def _transform_chunk(
-        self, df: pd.DataFrame,
-    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
-        """Transform a DataFrame chunk into (movements, company_rels, person_rels)."""
-        movements: list[dict[str, Any]] = []
-        company_rels: list[dict[str, Any]] = []
-        person_rels: list[dict[str, Any]] = []
+    def _transform_chunk(self, df: pd.DataFrame) -> list[dict[str, Any]]:
+        """Transform a DataFrame chunk into aggregate LaborStats rows."""
+        if df.empty:
+            return []
 
-        for _idx, row in df.iterrows():
-            cnpj_raw = str(row.get("cnpj_raiz", ""))
-            cnpj_digits = strip_document(cnpj_raw)
+        work = df.copy()
 
-            # cnpj_raiz is 8 digits (base CNPJ); pad to 14 for full CNPJ
-            if len(cnpj_digits) == 8:
-                cnpj_digits = cnpj_digits + "000100"  # main establishment
-            if len(cnpj_digits) != 14:
-                continue
+        def _col(name: str) -> pd.Series[Any]:
+            if name in work.columns:
+                return work[name]
+            return pd.Series([""] * len(work), index=work.index, dtype="string")
 
-            cnpj_formatted = format_cnpj(cnpj_digits)
+        work["ano"] = _col("ano").astype(str).str.strip()
+        work["mes"] = _col("mes").astype(str).str.strip()
+        work = work[(work["ano"] != "") & (work["mes"] != "")]
+        if work.empty:
+            return []
 
-            # CPF handling — CAGED microdados from BigQuery may not have CPF
-            cpf_raw = str(row.get("cpf", ""))
-            cpf_digits = strip_document(cpf_raw)
+        work["sigla_uf"] = _col("sigla_uf").astype(str).str.strip()
+        work["id_municipio"] = _col("id_municipio").astype(str).str.strip()
+        work["cnae_2_subclasse"] = _col("cnae_2_subclasse").astype(str).str.strip()
+        work["cbo_2002"] = _col("cbo_2002").astype(str).str.strip()
+        work["movement_type"] = _col("tipo_movimentacao").astype(str).str.strip().map(
+            lambda v: _MOVEMENT_TYPES.get(v, v),
+        )
+        work["salary"] = _col("salario_mensal").astype(str).map(_parse_salary)
+        work["movement_count"] = 1
+        work["admissions"] = (work["movement_type"] == "admissao").astype(int)
+        work["dismissals"] = (work["movement_type"] == "desligamento").astype(int)
 
-            ano = str(row.get("ano", "")).strip()
-            mes = str(row.get("mes", "")).strip()
-            if not ano or not mes:
-                continue
-
-            movement_date = _build_movement_date(ano, mes)
-
-            tipo_raw = str(row.get("tipo_movimentacao", "")).strip()
-            movement_type = _MOVEMENT_TYPES.get(tipo_raw, tipo_raw)
-
-            movement_id = _generate_movement_id(
-                cnpj_digits, cpf_digits, movement_date, movement_type,
+        group_cols = [
+            "ano",
+            "mes",
+            "sigla_uf",
+            "id_municipio",
+            "cnae_2_subclasse",
+            "cbo_2002",
+            "movement_type",
+        ]
+        grouped = (
+            work.groupby(group_cols, dropna=False)
+            .agg(
+                total_movements=("movement_count", "sum"),
+                admissions=("admissions", "sum"),
+                dismissals=("dismissals", "sum"),
+                avg_salary=("salary", "mean"),
             )
+            .reset_index()
+        )
 
-            salary = _parse_salary(str(row.get("salario_mensal", "")))
+        rows: list[dict[str, Any]] = []
+        for _, row in grouped.iterrows():
+            year = str(row["ano"]).strip()
+            month = str(row["mes"]).strip().zfill(2)
+            uf = str(row["sigla_uf"]).strip()
+            municipality_code = str(row["id_municipio"]).strip()
+            cnae_subclass = str(row["cnae_2_subclasse"]).strip()
+            cbo_code = str(row["cbo_2002"]).strip()
+            movement_type = str(row["movement_type"]).strip()
 
-            movement: dict[str, Any] = {
-                "movement_id": movement_id,
-                "cnpj": cnpj_formatted,
+            stats_id = _generate_stats_id(
+                year,
+                month,
+                uf,
+                municipality_code,
+                cnae_subclass,
+                cbo_code,
+                movement_type,
+            )
+            admissions = int(row["admissions"])
+            dismissals = int(row["dismissals"])
+
+            item: dict[str, Any] = {
+                "stats_id": stats_id,
+                "year": year,
+                "month": month,
+                "movement_date": _build_movement_date(year, month),
                 "movement_type": movement_type,
-                "movement_date": movement_date,
-                "cbo_code": str(row.get("cbo_2002", "")).strip(),
-                "cnae_code": str(row.get("cnae_2_subclasse", "")).strip(),
-                "municipality_code": str(row.get("id_municipio", "")).strip(),
-                "uf": str(row.get("sigla_uf", "")).strip(),
+                "uf": uf,
+                "municipality_code": municipality_code,
+                "cnae_subclass": cnae_subclass,
+                "cbo_code": cbo_code,
+                "total_movements": int(row["total_movements"]),
+                "admissions": admissions,
+                "dismissals": dismissals,
+                "net_balance": admissions - dismissals,
+                "identity_quality": "aggregate",
                 "source": "caged",
             }
-            if salary is not None:
-                movement["salary"] = salary
+            if pd.notna(row["avg_salary"]):
+                item["avg_salary"] = float(row["avg_salary"])
+            rows.append(item)
 
-            movements.append(movement)
-
-            company_rels.append({
-                "source_key": cnpj_formatted,
-                "target_key": movement_id,
-            })
-
-            if len(cpf_digits) == 11:
-                person_rels.append({
-                    "source_key": cpf_digits,
-                    "target_key": movement_id,
-                })
-
-        movements = deduplicate_rows(movements, ["movement_id"])
-        return movements, company_rels, person_rels
+        return deduplicate_rows(rows, ["stats_id"])
 
     def load(self) -> None:
         loader = Neo4jBatchLoader(self.driver)
 
-        company_query = (
-            "UNWIND $rows AS row "
-            "MATCH (c:Company {cnpj: row.source_key}) "
-            "MATCH (m:LaborMovement {movement_id: row.target_key}) "
-            "MERGE (c)-[:MOVIMENTOU]->(m)"
-        )
-        person_query = (
-            "UNWIND $rows AS row "
-            "MATCH (p:Person {cpf: row.source_key}) "
-            "MATCH (m:LaborMovement {movement_id: row.target_key}) "
-            "MERGE (p)-[:EMPREGADO_EM]->(m)"
-        )
-
         for csv_file in self._csv_files:
             logger.info("Processing %s ...", csv_file.name)
             reader = pd.read_csv(
-                csv_file, dtype=str, keep_default_na=False,
-                chunksize=_READ_CHUNK_SIZE, nrows=self.limit,
+                csv_file,
+                dtype=str,
+                keep_default_na=False,
+                chunksize=_READ_CHUNK_SIZE,
+                nrows=self.limit,
             )
             for chunk in reader:
-                movements, company_rels, person_rels = self._transform_chunk(chunk)
-
-                if movements:
-                    loader.load_nodes("LaborMovement", movements, key_field="movement_id")
-
-                    # Ensure Company nodes exist for CNPJ linking
-                    companies = deduplicate_rows(
-                        [{"cnpj": rel["source_key"]} for rel in company_rels],
-                        ["cnpj"],
-                    )
-                    loader.load_nodes("Company", companies, key_field="cnpj")
-
-                if company_rels:
-                    loader.run_query_with_retry(company_query, company_rels)
-
-                if person_rels:
-                    loader.run_query_with_retry(person_query, person_rels)
-
+                stats_rows = self._transform_chunk(chunk)
+                if stats_rows:
+                    loader.load_nodes("LaborStats", stats_rows, key_field="stats_id")
             logger.info("Finished %s", csv_file.name)

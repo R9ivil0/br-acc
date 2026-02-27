@@ -30,6 +30,7 @@ interface GraphCanvasProps {
   hoveredNodeId: string | null;
   layoutMode: "force" | "hierarchy";
   onNodeClick: (nodeId: string) => void;
+  onNodeDeselect: () => void;
   onNodeHover: (nodeId: string | null) => void;
   onNodeRightClick: (x: number, y: number, nodeId: string) => void;
   onLayoutChange: (mode: "force" | "hierarchy") => void;
@@ -62,6 +63,7 @@ function GraphCanvasInner({
   hoveredNodeId,
   layoutMode,
   onNodeClick,
+  onNodeDeselect,
   onNodeHover,
   onNodeRightClick,
   onLayoutChange,
@@ -293,6 +295,12 @@ function GraphCanvasInner({
     [onNodeRightClick],
   );
 
+  const handleBackgroundClick = useCallback(() => {
+    onNodeDeselect();
+    setContextMenu(null);
+    setSelectedEdge(null);
+  }, [onNodeDeselect]);
+
   const handleLinkClick = useCallback((link: GraphLinkObject) => {
     setSelectedEdge(link);
   }, []);
@@ -384,6 +392,7 @@ function GraphCanvasInner({
           onNodeClick={handleNodeClick}
           onNodeHover={handleNodeHover}
           onNodeRightClick={handleNodeRightClick}
+          onBackgroundClick={handleBackgroundClick}
           onLinkClick={handleLinkClick}
           onZoom={handleZoom}
           backgroundColor="rgba(0,0,0,0)"

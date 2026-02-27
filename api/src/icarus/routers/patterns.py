@@ -19,8 +19,14 @@ async def get_patterns_for_entity(
     entity_id: str,
     driver: Annotated[AsyncDriver, Depends(get_driver)],
     lang: Annotated[str, Query()] = "pt",
+    include_probable: Annotated[bool, Query()] = False,
 ) -> PatternResponse:
-    results = await run_all_patterns(driver, entity_id, lang)
+    results = await run_all_patterns(
+        driver,
+        entity_id,
+        lang,
+        include_probable=include_probable,
+    )
     return PatternResponse(
         entity_id=entity_id,
         patterns=results,
@@ -36,6 +42,7 @@ async def get_specific_pattern(
     pattern_name: str,
     session: Annotated[AsyncSession, Depends(get_session)],
     lang: Annotated[str, Query()] = "pt",
+    include_probable: Annotated[bool, Query()] = False,
 ) -> PatternResponse:
     if pattern_name not in PATTERN_QUERIES:
         available = list(PATTERN_QUERIES.keys())
@@ -43,7 +50,13 @@ async def get_specific_pattern(
             status_code=404,
             detail=f"Pattern not found: {pattern_name}. Available: {available}",
         )
-    results = await run_pattern(session, pattern_name, entity_id, lang)
+    results = await run_pattern(
+        session,
+        pattern_name,
+        entity_id,
+        lang,
+        include_probable=include_probable,
+    )
     return PatternResponse(
         entity_id=entity_id,
         patterns=results,

@@ -179,6 +179,7 @@ class TestPncpTransform:
             "bid_id", "description", "modality", "amount", "date",
             "status", "agency_name", "agency_cnpj", "municipality",
             "state", "esfera", "processo", "srp", "source",
+            "coverage_start", "coverage_end", "coverage_complete",
         }
         for b in pipeline.bids:
             assert set(b.keys()) == expected_fields
@@ -274,6 +275,9 @@ class TestPncpTransform:
             pipeline_tmp = PncpPipeline(MagicMock(), data_dir=tmpdir)
             pipeline_tmp.extract()
             assert len(pipeline_tmp._raw_records) == 1
+            assert pipeline_tmp.coverage_start == "2025-01-01"
+            assert pipeline_tmp.coverage_end == "2025-01-01"
+            assert pipeline_tmp.coverage_complete is False
 
 
 # --- Load ---

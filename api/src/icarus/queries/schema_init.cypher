@@ -5,6 +5,9 @@
 CREATE CONSTRAINT person_cpf_unique IF NOT EXISTS
   FOR (p:Person) REQUIRE p.cpf IS UNIQUE;
 
+CREATE CONSTRAINT partner_id_unique IF NOT EXISTS
+  FOR (p:Partner) REQUIRE p.partner_id IS UNIQUE;
+
 CREATE CONSTRAINT company_cnpj_unique IF NOT EXISTS
   FOR (c:Company) REQUIRE c.cnpj IS UNIQUE;
 
@@ -56,6 +59,15 @@ CREATE INDEX person_cpf_middle6 IF NOT EXISTS
 
 CREATE INDEX person_cpf_partial IF NOT EXISTS
   FOR (p:Person) ON (p.cpf_partial);
+
+CREATE INDEX partner_name IF NOT EXISTS
+  FOR (p:Partner) ON (p.name);
+
+CREATE INDEX partner_doc_partial IF NOT EXISTS
+  FOR (p:Partner) ON (p.doc_partial);
+
+CREATE INDEX partner_name_doc_partial IF NOT EXISTS
+  FOR (p:Partner) ON (p.name, p.doc_partial);
 
 CREATE INDEX company_razao_social IF NOT EXISTS
   FOR (c:Company) ON (c.razao_social);
@@ -151,8 +163,8 @@ CREATE INDEX public_office_org IF NOT EXISTS
 
 // ── Fulltext Search Index ───────────────────────────────
 CREATE FULLTEXT INDEX entity_search IF NOT EXISTS
-  FOR (n:Person|Company|Health|Education|Contract|Amendment|Convenio|Embargo|PublicOffice)
-  ON EACH [n.name, n.razao_social, n.cpf, n.cnpj, n.cnes_code, n.object, n.contracting_org, n.convenente, n.infraction, n.org, n.function];
+  FOR (n:Person|Partner|Company|Health|Education|Contract|Amendment|Convenio|Embargo|PublicOffice)
+  ON EACH [n.name, n.razao_social, n.cpf, n.cnpj, n.doc_partial, n.doc_raw, n.cnes_code, n.object, n.contracting_org, n.convenente, n.infraction, n.org, n.function];
 
 // ── User Constraints ────────────────────────────────────
 CREATE CONSTRAINT user_email_unique IF NOT EXISTS

@@ -163,8 +163,10 @@ def test_transform_rf_format_extracts_partners() -> None:
     pipeline.extract()
     pipeline.transform()
 
-    assert len(pipeline.partners) == 3
-    partner_names = [p["name"] for p in pipeline.partners]
+    # RF fixture socios use masked CPFs -> Partner nodes, not Person
+    assert len(pipeline.partners) == 0
+    assert len(pipeline.partial_partners) == 3
+    partner_names = [p["name"] for p in pipeline.partial_partners]
     assert "JOAO DA SILVA" in partner_names
     assert "MARIA SANTOS" in partner_names
 
@@ -174,8 +176,9 @@ def test_transform_rf_format_extracts_relationships() -> None:
     pipeline.extract()
     pipeline.transform()
 
-    assert len(pipeline.relationships) == 3
-    rel = pipeline.relationships[0]
+    assert len(pipeline.relationships) == 0
+    assert len(pipeline.partner_relationships) == 3
+    rel = pipeline.partner_relationships[0]
     assert "source_key" in rel
     assert "target_key" in rel
     assert "tipo_socio" in rel
@@ -184,20 +187,15 @@ def test_transform_rf_format_extracts_relationships() -> None:
 
 
 def test_transform_rf_format_preserves_partial_cpfs() -> None:
-    """Partial CPFs from Receita Federal have non-digits stripped by format_cpf.
-
-    RF partial CPFs like '***123456**' become '123456' (digits only, not 11 chars
-    so format_cpf returns raw digits). This preserves enough info for entity resolution.
-    """
+    """Partial CPFs from Receita Federal are kept as Partner partial docs."""
     pipeline = _make_pipeline()
     pipeline.extract()
     pipeline.transform()
 
-    cpfs = [p["cpf"] for p in pipeline.partners]
-    # After format_cpf, non-digit chars are stripped; partial CPFs become digit-only
-    assert all(cpf.isdigit() for cpf in cpfs)
-    # Partial CPFs don't have 11 digits, so they won't be in XXX.XXX.XXX-XX format
-    assert any(len(cpf) != 11 and "." not in cpf for cpf in cpfs)
+    docs = [p["doc_partial"] for p in pipeline.partial_partners]
+    assert all(len(doc) == 6 for doc in docs)
+    assert "123456" in docs
+    assert "987654" in docs
 
 
 def test_transform_socios_rf_formats_cpf() -> None:
@@ -222,11 +220,15 @@ def test_transform_socios_rf_formats_cpf() -> None:
             "faixa_etaria": "6",
         },
     ])
-    partners, pf_rels, pj_rels = pipeline._transform_socios_rf(pipeline._raw_socios)
+    partners, partial_partners, pf_rels, partial_rels, pj_rels = pipeline._transform_socios_rf(
+        pipeline._raw_socios,
+    )
 
     assert len(partners) == 1
+    assert len(partial_partners) == 0
     assert partners[0]["cpf"] == "123.456.789-01"
     assert pf_rels[0]["source_key"] == "123.456.789-01"
+    assert len(partial_rels) == 0
     assert len(pj_rels) == 0
 
 
@@ -324,7 +326,9 @@ def test_transform_simple_format() -> None:
 
     assert len(pipeline.companies) == 3
     assert len(pipeline.partners) == 3
+    assert len(pipeline.partial_partners) == 0
     assert len(pipeline.relationships) == 3
+    assert len(pipeline.partner_relationships) == 0
 
 
 def test_transform_simple_format_formats_cnpj() -> None:
@@ -439,15 +443,19 @@ def test_transform_socios_rf_vectorized() -> None:
     pipeline = _make_pipeline()
     pipeline.extract()
     pipeline._build_estab_lookup(pipeline._raw_estabelecimentos)
-    partners, pf_rels, pj_rels = pipeline._transform_socios_rf(pipeline._raw_socios)
+    partners, partial_partners, pf_rels, partial_rels, pj_rels = pipeline._transform_socios_rf(
+        pipeline._raw_socios,
+    )
 
-    # All 3 fixture rows are PF (identificador_socio=2)
-    assert len(partners) == 3
-    assert len(pf_rels) == 3
+    # All 3 fixture rows are PF but with masked docs -> Partner path
+    assert len(partners) == 0
+    assert len(partial_partners) == 3
+    assert len(pf_rels) == 0
+    assert len(partial_rels) == 3
     assert len(pj_rels) == 0
-    assert partners[0]["name"] == "JOAO DA SILVA"
-    assert "source_key" in pf_rels[0]
-    assert "target_key" in pf_rels[0]
+    assert partial_partners[0]["name"] == "JOAO DA SILVA"
+    assert "source_key" in partial_rels[0]
+    assert "target_key" in partial_rels[0]
 
 
 # --- Streaming pipeline ---
@@ -535,15 +543,19 @@ def test_transform_socios_rf_pj_partner_uses_format_cnpj() -> None:
         },
     ])
 
-    partners, pf_rels, pj_rels = pipeline._transform_socios_rf(pipeline._raw_socios)
+    partners, partial_partners, pf_rels, partial_rels, pj_rels = pipeline._transform_socios_rf(
+        pipeline._raw_socios,
+    )
 
     # Only PF partner returned as Person
     assert len(partners) == 1
+    assert len(partial_partners) == 0
     assert partners[0]["cpf"] == "123.456.789-01"
 
     # PF relationship: Person→Company
     assert len(pf_rels) == 1
     assert pf_rels[0]["source_key"] == "123.456.789-01"
+    assert len(partial_rels) == 0
 
     # PJ relationship: Company→Company with formatted CNPJ
     assert len(pj_rels) == 1
@@ -605,5 +617,5 @@ def test_transform_socios_rf_normalizes_data_entrada() -> None:
         },
     ])
 
-    _, pf_rels, _ = pipeline._transform_socios_rf(pipeline._raw_socios)
+    _, _, pf_rels, _, _ = pipeline._transform_socios_rf(pipeline._raw_socios)
     assert pf_rels[0]["data_entrada"] == "2020-01-15"

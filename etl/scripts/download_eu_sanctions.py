@@ -11,6 +11,7 @@ Usage:
 from __future__ import annotations
 
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -23,10 +24,17 @@ from _download_utils import download_file
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
-EU_SANCTIONS_URL = (
+EU_SANCTIONS_BASE_URL = (
     "https://webgate.ec.europa.eu/fsd/fsf/public/files/"
-    "csvFullSanctionsList/content?token={token}"
+    "csvFullSanctionsList/content"
 )
+
+
+def _build_eu_sanctions_url() -> str:
+    token = os.getenv("EU_SANCTIONS_TOKEN", "").strip()
+    if token:
+        return f"{EU_SANCTIONS_BASE_URL}?token={token}"
+    return EU_SANCTIONS_BASE_URL
 
 
 @click.command()
@@ -47,7 +55,7 @@ def main(output_dir: str, skip_existing: bool, timeout: int) -> None:
         return
 
     logger.info("=== Downloading EU consolidated sanctions list ===")
-    if download_file(EU_SANCTIONS_URL, dest, timeout=timeout):
+    if download_file(_build_eu_sanctions_url(), dest, timeout=timeout):
         logger.info("=== Done: EU sanctions downloaded to %s ===", dest)
     else:
         logger.warning("Failed to download EU sanctions list")

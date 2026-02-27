@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import csv
 import logging
+import os
 from pathlib import Path
 
 import click
@@ -32,6 +33,10 @@ WB_LEGACY_CATALOG = (
 
 def _download_json_api(dest: Path, timeout: int) -> bool:
     """Download via the World Bank JSON API and convert to CSV."""
+    if not WB_API_KEY:
+        logger.info("WORLD_BANK_API_KEY not set; skipping JSON API method")
+        return False
+
     logger.info("Downloading from JSON API: %s", WB_JSON_API)
     try:
         resp = httpx.get(
